@@ -1,8 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
+이 프로젝트는 pnpm 을 사용하였습니다
 
-First, run the development server:
+.env.example 파일을 .env 로 copy 하고 MISTRAL_API_KEY 를 입력합니다 ( https://console.mistral.ai/home )
+
+Install required packages:
+```bash
+pnpm install
+```
+Run the development server:
 
 ```bash
 npm run dev
