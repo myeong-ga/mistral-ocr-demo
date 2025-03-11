@@ -1,101 +1,166 @@
-import Image from "next/image";
+"use client"
+
+import { useState } from "react"
+import { FileUploader } from "@/components/file-uploader"
+import { ProcessingIndicator } from "@/components/processing-indicator"
+import { ResultsViewer } from "@/components/results-viewer"
+import { InfoPanel } from "@/components/info-panel"
+import { ErrorDisplay } from "@/components/error-display"
+import { SamplePdfOption } from "@/components/sample-pdf-option"
+import { Button } from "@/components/ui/button"
+import { Info } from "lucide-react"
+
+// Define interfaces to match ResultsViewer props
+interface ImageData {
+  id: string
+  url: string
+  coordinates: { x: number; y: number; width: number; height: number }
+  originalCoordinates: {
+    top_left_x: number
+    top_left_y: number
+    bottom_right_x: number
+    bottom_right_y: number
+  }
+}
+
+interface PageData {
+  index: number
+  markdown: string
+  rawMarkdown: string
+  images: ImageData[]
+  dimensions: {
+    dpi: number
+    height: number
+    width: number
+  }
+}
+
+interface ResultsData {
+  text: string
+  rawText: string
+  pages: PageData[]
+  images: ImageData[]
+  usage?: {
+    pages_processed: number
+    doc_size_bytes: number
+  }
+  model?: string
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [file, setFile] = useState<File | null>(null)
+  const [processingStage, setProcessingStage] = useState<"uploading" | "processing" | "extracting" | null>(null)
+  const [results, setResults] = useState<ResultsData | null>(null)
+  const [error, setError] = useState<{ message: string; details?: string } | null>(null)
+  const [showInfo, setShowInfo] = useState(false)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleFileSelected = (selectedFile: File) => {
+    setFile(selectedFile)
+    setResults(null)
+    setError(null)
+  }
+
+  const handleProcessFile = async () => {
+    if (!file) return
+
+    setError(null)
+    setProcessingStage("uploading")
+
+    const formData = new FormData()
+    formData.append("pdf", file)
+
+    try {
+      // Simulate the uploading stage
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      setProcessingStage("processing")
+
+      // Simulate the processing stage
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      setProcessingStage("extracting")
+
+      const response = await fetch("/api/parse-pdf", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to process PDF")
+      }
+
+      const data = await response.json()
+      setResults(data)
+    } catch (error) {
+      console.error("Error processing PDF:", error)
+      setError({
+        message: error instanceof Error ? error.message : "An unexpected error occurred",
+        details: error instanceof Error ? error.stack : undefined,
+      })
+    } finally {
+      setProcessingStage(null)
+    }
+  }
+
+  const toggleInfoPanel = () => {
+    setShowInfo(!showInfo)
+  }
+
+  return (
+    <main className="min-h-screen p-4 md:p-8 bg-background">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Mistral OCR PDF Parser</h1>
+          <Button variant="ghost" size="icon" onClick={toggleInfoPanel} aria-label="Show information">
+            <Info className="h-5 w-5" />
+          </Button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+        {showInfo && <InfoPanel onClose={toggleInfoPanel} />}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div className="bg-card rounded-lg p-6 shadow-sm">
+              <h2 className="text-xl font-semibold mb-4">Upload PDF</h2>
+              <FileUploader onFileSelected={handleFileSelected} />
+
+              <SamplePdfOption onSelect={handleFileSelected} />
+
+              {file && !processingStage && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">Selected file: {file.name}</p>
+                  <Button onClick={handleProcessFile} className="w-full">
+                    Process PDF
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {processingStage && (
+              <div className="bg-card rounded-lg p-6 shadow-sm">
+                <ProcessingIndicator stage={processingStage} />
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-card rounded-lg p-6 shadow-sm">
+                <ErrorDisplay message={error.message} details={error.details} onRetry={handleProcessFile} />
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Results</h2>
+            {results ? (
+              <ResultsViewer results={results} originalFile={file} />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-muted-foreground">Upload and process a PDF to see the parsed results</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
 }
+
