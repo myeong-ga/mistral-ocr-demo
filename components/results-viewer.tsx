@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Download, Copy, Check, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Info } from "lucide-react"
-import ReactMarkdown from "react-markdown"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Markdown } from "@/lib/markdown"
 
 interface ImageData {
   id: string
@@ -47,6 +47,9 @@ interface ResultsViewerProps {
 }
 
 export function ResultsViewer({ results, originalFile }: ResultsViewerProps) {
+  console.log("ResultsViewer", results)
+  
+
   const [activeTab, setActiveTab] = useState("parsed")
   const [copied, setCopied] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -174,7 +177,7 @@ export function ResultsViewer({ results, originalFile }: ResultsViewerProps) {
 
         <TabsContent value="parsed" className="mt-0">
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{results.text}</ReactMarkdown>
+            <Markdown>{results.text}</Markdown>
           </div>
         </TabsContent>
 
@@ -199,7 +202,7 @@ export function ResultsViewer({ results, originalFile }: ResultsViewerProps) {
             }}
           >
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{currentPageData?.markdown || ""}</ReactMarkdown>
+              <Markdown>{currentPageData?.markdown || ""}</Markdown>
             </div>
 
             <TooltipProvider>

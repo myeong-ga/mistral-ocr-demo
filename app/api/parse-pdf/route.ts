@@ -43,49 +43,50 @@ export async function POST(request: NextRequest) {
         documentName: pdfFile.name,
       },
      
-      include_image_base64: true,
-      image_limit: 50, // Reasonable limit for most documents
-      image_min_size: 100, // Minimum size in pixels
+      includeImageBase64: true,
+      imageLimit: 50, // Reasonable limit for most documents
+      imageMinSize: 100, // Minimum size in pixels
     })
+
+    process.stdout.write(JSON.stringify(ocrResponse, null, 2))
 
     // Process the OCR response based on the provided format
     const processedPages = ocrResponse.pages.map((page) => {
-      // Create a map of image IDs to base64 data URLs
-      const imageMap = {}
+      const imageMap: Record<string, string> = {}
 
       // Process images for this page
       const images =
         page.images?.map((image) => {
           // Create a data URL for the image
         
-          const dataUrl = `data:image/png;base64,${image.image_base64}`
+          const dataUrl = `${image.imageBase64}`
 
           // Store in the map for markdown replacement
           
           imageMap[image.id] = dataUrl
 
           // Calculate width and height from coordinates
-          const width = image.bottom_right_x - image.top_left_x
-          const height = image.bottom_right_y - image.top_left_y
+          const width = (image.bottomRightX ?? 0) - (image.topLeftX ?? 0)
+          const height = (image.bottomRightY ?? 0) - (image.topLeftY ?? 0)
 
           // Calculate relative coordinates based on page dimensions
-          const pageWidth = page.dimensions.width
-          const pageHeight = page.dimensions.height
+          const pageWidth = page.dimensions?.width ?? 1
+          const pageHeight = page.dimensions?.height ?? 1
 
           return {
             id: image.id,
             url: dataUrl,
             coordinates: {
-              x: image.top_left_x / pageWidth,
-              y: image.top_left_y / pageHeight,
+              x: (image.topLeftX ?? 0) / pageWidth,
+              y: (image.topLeftY ?? 0) / pageHeight,
               width: width / pageWidth,
               height: height / pageHeight,
             },
             originalCoordinates: {
-              top_left_x: image.top_left_x,
-              top_left_y: image.top_left_y,
-              bottom_right_x: image.bottom_right_x,
-              bottom_right_y: image.bottom_right_y,
+              top_left_x: image.topLeftX,
+              top_left_y: image.topLeftY,
+              bottom_right_x: image.bottomRightX,
+              bottom_right_y: image.bottomRightY,
             },
           }
         }) || []
@@ -93,10 +94,13 @@ export async function POST(request: NextRequest) {
       // Replace image placeholders in markdown
       let processedMarkdown = page.markdown
       Object.entries(imageMap).forEach(([id, dataUrl]) => {
+        // processedMarkdown = processedMarkdown.replace(
+        //   new RegExp(`!\\[${id}\\]\$$${id}\$$`, "g"),`![${id}](${dataUrl})`,
+        // )
         processedMarkdown = processedMarkdown.replace(
-          new RegExp(`!\\[${id}\\]\$$${id}\$$`, "g"),
+          new RegExp(`!\\[${id}\\]`, "g"),
           `![${id}](${dataUrl})`,
-        )
+        );
       })
 
       return {
@@ -114,12 +118,14 @@ export async function POST(request: NextRequest) {
     const allImages = processedPages.flatMap((page) => page.images)
 
     // Return the processed data
+
+
     return NextResponse.json({
       text: combinedMarkdown,
       rawText: rawMarkdown,
       pages: processedPages,
       images: allImages,
-      usage: ocrResponse.usage_info,
+      usage: ocrResponse.usageInfo,
       model: ocrResponse.model,
     })
   } catch (error) {
