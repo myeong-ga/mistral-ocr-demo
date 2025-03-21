@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     // Get a signed URL for the uploaded file
     const signedUrl = await client.files.getSignedUrl({
       fileId: uploadedPdf.id,
+      expiry: 1,
     })
 
     // Process the PDF with Mistral OCR
@@ -42,13 +43,10 @@ export async function POST(request: NextRequest) {
         documentUrl: signedUrl.url,
         documentName: pdfFile.name,
       },
-     
       includeImageBase64: true,
-      imageLimit: 50, // Reasonable limit for most documents
-      imageMinSize: 100, // Minimum size in pixels
     })
 
-    process.stdout.write(JSON.stringify(ocrResponse, null, 2))
+    // process.stdout.write(JSON.stringify(ocrResponse, null, 2))
 
     // Process the OCR response based on the provided format
     const processedPages = ocrResponse.pages.map((page) => {
@@ -92,15 +90,11 @@ export async function POST(request: NextRequest) {
         }) || []
 
       // Replace image placeholders in markdown
-      let processedMarkdown = page.markdown
+      let processedMarkdown = page.markdown;
       Object.entries(imageMap).forEach(([id, dataUrl]) => {
-        // processedMarkdown = processedMarkdown.replace(
-        //   new RegExp(`!\\[${id}\\]\$$${id}\$$`, "g"),`![${id}](${dataUrl})`,
-        // )
         processedMarkdown = processedMarkdown.replace(
-          new RegExp(`!\\[${id}\\]`, "g"),
-          `![${id}](${dataUrl})`,
-        );
+          new RegExp(`!\\[${id}\\]\$$${id}\$$`, "g"),`![${id}](${dataUrl})`,
+        )
       })
 
       return {

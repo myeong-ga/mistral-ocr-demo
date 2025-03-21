@@ -1,78 +1,109 @@
-import { marked } from "marked"
-import { memo, useId, useMemo } from "react"
-import ReactMarkdown, { Components } from "react-markdown"
-import remarkGfm from "remark-gfm"
+import Link from 'next/link';
+import React, { memo, useMemo, useState } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-export type MarkdownProps = {
-  children: string
-  id?: string
-  className?: string
-  components?: Partial<Components>
-}
 
-function parseMarkdownIntoBlocks(markdown: string): string[] {
-  const tokens = marked.lexer(markdown)
-  return tokens.map((token) => token.raw)
-}
-
-function extractLanguage(className?: string): string {
-  if (!className) return "plaintext"
-  const match = className.match(/language-(\w+)/)
-  return match ? match[1] : "plaintext"
-}
-
-const INITIAL_COMPONENTS: Partial<Components> = {
+const components: Partial<Components> = {
  
-  pre: function PreComponent({ children }) {
-    return <>{children}</>
-  },
-}
 
-const MemoizedMarkdownBlock = memo(
-  function MarkdownBlock({
-    content,
-    components = INITIAL_COMPONENTS,
-  }: {
-    content: string
-    components?: Partial<Components>
-  }) {
+  pre: ({ children }) => <>{children}</>,
+  ol: ({ node, children, ...props }) => {
     return (
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-        {content}
-      </ReactMarkdown>
-    )
+      <ol className="list-decimal list-outside ml-4" {...props}>
+        {children}
+      </ol>
+    );
   },
-  function propsAreEqual(prevProps, nextProps) {
-    return prevProps.content === nextProps.content
-  }
-)
+  li: ({ node, children, ...props }) => {
+    return (
+      <li className="py-1" {...props}>
+        {children}
+      </li>
+    );
+  },
+  ul: ({ node, children, ...props }) => {
+    return (
+      <ul className="list-decimal list-outside ml-4" {...props}>
+        {children}
+      </ul>
+    );
+  },
+  strong: ({ node, children, ...props }) => {
+    return (
+      <span className="font-semibold" {...props}>
+        {children}
+      </span>
+    );
+  },
+  a: ({ node, children, ...props }) => {
+    return (
+      // @ts-expect-error
+      <Link
+        className="text-blue-500 hover:underline"
+        target="_blank"
+        rel="noreferrer"
+        {...props}
+      >
+        {children}
+      </Link>
+    );
+  },
+  h1: ({ node, children, ...props }) => {
+    return (
+      <h1 className="text-3xl font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h1>
+    );
+  },
+  h2: ({ node, children, ...props }) => {
+    return (
+      <h2 className="text-2xl font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h2>
+    );
+  },
+  h3: ({ node, children, ...props }) => {
+    return (
+      <h3 className="text-xl font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h3>
+    );
+  },
+  h4: ({ node, children, ...props }) => {
+    return (
+      <h4 className="text-lg font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h4>
+    );
+  },
+  h5: ({ node, children, ...props }) => {
+    return (
+      <h5 className="text-base font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h5>
+    );
+  },
+  h6: ({ node, children, ...props }) => {
+    return (
+      <h6 className="text-sm font-semibold mt-6 mb-2" {...props}>
+        {children}
+      </h6>
+    );
+  },
+};
 
-MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock"
+const remarkPlugins = [remarkGfm];
 
-function MarkdownComponent({
-  children,
-  id,
-  className,
-  components = INITIAL_COMPONENTS,
-}: MarkdownProps) {
-  const generatedId = useId()
-  const blockId = id ?? generatedId
-  const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children])
-
+const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (
-    <div className={className}>
-      {blocks.map((block, index) => (
-        <MemoizedMarkdownBlock
-          key={`${blockId}-block-${index}`}
-          content={block}
-          components={components}
-        />
-      ))}
-    </div>
-  )
-}
+    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+      {children}
+    </ReactMarkdown>
+  );
+};
 
-const Markdown = memo(MarkdownComponent)
-Markdown.displayName = "Markdown"
-
-export { Markdown }
+export const Markdown = memo(
+  NonMemoizedMarkdown,
+  (prevProps, nextProps) => prevProps.children === nextProps.children,
+);
